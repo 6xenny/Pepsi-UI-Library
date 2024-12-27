@@ -616,10 +616,10 @@ local function resolveid(image, flag)
 		local succezz = pcall(function()
 			local typ = type(image)
 			if typ == "string" then
-				if getsynasset then
-					if #image > 11 and (string.sub(image, 1, 11) == "synasset://") then
-						return getsynasset(string.sub(image, 12))
-					elseif (#image > 14) and (string.sub(image, 1, 14) == "synasseturl://") then
+				if getcustomasset then
+					if #image > 11 and (string.sub(image, 1, 11) == "asset://") then
+						return getcustomasset(string.sub(image, 12))
+					elseif (#image > 14) and (string.sub(image, 1, 14) == "asseturl://") then
 						local x, e = pcall(function()
 							local codename, fixes = string.gsub(image, ".", function(c)
 								if c:lower() == c:upper() and not tonumber(c) then
@@ -637,18 +637,18 @@ local function resolveid(image, flag)
 							else
 								makefolder("./Pepsi Lib/Themes")
 							end
-							fold = isfolder("./Pepsi Lib/Themes/SynapseAssetsCache")
+							fold = isfolder("./Pepsi Lib/Themes/AssetsCache")
 							if fold then
 							else
-								makefolder("./Pepsi Lib Themes/SynapseAssetsCache")
+								makefolder("./Pepsi Lib Themes/AssetsCache")
 							end
-							if not fold or not isfile("./Pepsi Lib/Themes/SynapseAssetsCache/" .. codename .. ".dat") then
+							if not fold or not isfile("./Pepsi Lib/Themes/AssetsCache/" .. codename .. ".dat") then
 								local res = game:HttpGet(string.sub(image, 15))
 								if res ~= nil then
-									writefile("./Pepsi Lib/Themes/SynapseAssetsCache/" .. codename .. ".dat", res)
+									writefile("./Pepsi Lib/Themes/AssetsCache/" .. codename .. ".dat", res)
 								end
 							end
-							return getsynasset(readfile("./Pepsi Lib/Themes/SynapseAssetsCache/" .. codename .. ".dat"))
+							return getcustomasset(readfile("./Pepsi Lib/Themes/AssetsCache/" .. codename .. ".dat"))
 						end)
 						if x and e ~= nil then
 							return e
@@ -982,11 +982,11 @@ function library.unload()
 	warn("Unloaded")
 end
 library.Unload = library.unload
-local Instance_new = (syn and syn.protect_gui and function(...)
+local Instance_new = (gethui and gethui and function(...)
 	local x = {Instance.new(...)}
 	if x[1] then
 		library.objects[1 + #library.objects] = x[1]
-		pcall(syn.protect_gui, x[1])
+		pcall(gethui, x[1])
 	end
 	return unpack(x)
 end) or function(...)
@@ -7670,109 +7670,6 @@ function library:CreateWindow(options, ...)
 				end)
 			end
 			os_clock, starttime = nil
-		end)
-		task.spawn(function(Library, Window)
-			if Library then else
-				Library = shared.libraries[1]
-				if Library then else
-					return warn("Could not find library! Please pass the library as argument #1")
-				end
-			end
-
-			if Window then else
-				for k, v in next, Library.globals do
-					if v and v.windowFunctions then
-						Window = v.windowFunctions
-						break
-					end
-				end
-				if Window then else
-					return warn("Could not find window! Please pass the window as argument #2")
-				end
-			end
-
-			local KeybindsTab = Window:CreateTab({
-				Name = "Keybinds"
-			})
-
-			local KeybindsSectionL = KeybindsTab:CreateSection({
-				Name = "Keybinds",
-				Side = "left"
-			})
-
-			local KeybindsSectionR = KeybindsTab:CreateSection({
-				Name = "Keybinds",
-				Side = "right"
-			})
-
-			local MayUpdate = true
-
-			local function Sort1Lower(A, B)
-				return A[1]:lower() < B[1]:lower()
-			end
-
-			local function GetAllBinds()
-				local Keybinds = {}
-				for Name, Element in next, Library.elements do
-					if Element and (Element.Type == "Keybind") and (Element.IsKeybindHook == nil) and (Element.Flag ~= "__Designer.Settings.ShowHideKey") then
-						Element.OriginalCallback = Element.OriginalCallback or Element.Callback
-						Keybinds[1 + #Keybinds] = {Name, Element}
-					end
-				end
-				table.sort(Keybinds, Sort1Lower)
-				return Keybinds
-			end
-
-			local function ClearAllBinds()
-				for _, Element in next, Library.elements do
-					if Element and Element.IsKeybindHook and (Element.Type == "Keybind") then
-						Element:Remove()
-					end
-				end
-			end
-
-			local function PopulateBinds()
-				MayUpdate = nil
-				local Keybinds = GetAllBinds()
-				ClearAllBinds()
-				local Side = 0
-				for _, Data in next, Keybinds do
-					local Name, Keybind = Data[1], Data[2]
-					local Desc
-					if Keybind.ToggleData then
-						Desc = Keybind.ToggleData.Options.Name
-					else
-						Desc = Keybind.Options.Name
-					end
-					Side = 1 + (Side % 2)
-					local KeybindsSection = ((Side == 1) and KeybindsSectionL) or KeybindsSectionR
-					local Bind
-					Bind = KeybindsSection:AddKeybind({
-						Name = Desc,
-						Value = Keybind:Get(),
-						Callback = function(Key)
-							if MayUpdate then
-								Keybind:Set(Key)
-								Bind:Set(Key)
-							end
-						end
-					})
-					function Keybind.Callback(...)
-						local Key = ...
-						pcall(Bind.Set, Bind, Key)
-						if Keybind.OriginalCallback then
-							return Keybind.OriginalCallback(...)
-						end
-					end
-					Bind.IsKeybindHook = true
-				end
-				MayUpdate = true
-			end
-
-			PopulateBinds()
-			while Library.Wait(10) do
-				PopulateBinds()
-			end
 		end)
 	end
 	return windowFunctions
